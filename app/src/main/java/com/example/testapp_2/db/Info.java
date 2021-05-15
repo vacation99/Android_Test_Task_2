@@ -8,13 +8,13 @@ public class Info extends RealmObject {
     @PrimaryKey
     String name;
     String image;
-    String viewers;
+    int viewers;
     String channels;
 
     public Info() {
     }
 
-    public Info(String name, String image, String viewers, String channels) {
+    public Info(String name, String image, int viewers, String channels) {
         this.name = name;
         this.image = image;
         this.viewers = viewers;
@@ -37,11 +37,11 @@ public class Info extends RealmObject {
         this.name = name;
     }
 
-    public String getViewers() {
+    public int getViewers() {
         return viewers;
     }
 
-    public void setViewers(String viewers) {
+    public void setViewers(int viewers) {
         this.viewers = viewers;
     }
 

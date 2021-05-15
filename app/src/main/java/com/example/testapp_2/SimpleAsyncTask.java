@@ -10,6 +10,7 @@ import com.google.gson.Gson;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.lang.ref.WeakReference;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
@@ -19,21 +20,29 @@ import io.realm.RealmConfiguration;
 import io.realm.RealmResults;
 
 public class SimpleAsyncTask extends AsyncTask<Void, Void, Void> {
-    private ArrayList<Info> arrayList = new ArrayList<>(20);
-    private RecyclerViewAdapter recyclerViewAdapter;
+
+    private ArrayList<Info> arrayList = new ArrayList<>(StaticParams.amount);
+    private final RecyclerViewAdapter recyclerViewAdapter;
+    private final WeakReference<Context> contextWeakReference;
+
+    // Если false, значит интернет есть и полученные данные подгрузятся в БД (старые данные удалятся)
+    // Если true, значит интернета нет и данные загрузятся из БД с последней сохранённой сессии
     private boolean offline = false;
-    private Context context;
+
     Realm realm;
 
     public SimpleAsyncTask(RecyclerViewAdapter recyclerViewAdapter, Context context) {
         this.recyclerViewAdapter = recyclerViewAdapter;
-        this.context = context;
+        this.contextWeakReference = new WeakReference<>(context);
     }
 
     @Override
     protected Void doInBackground(Void... voids) {
+
+        // Получение данных и сохранение в arrayList
+
         try {
-            URL url = new URL("https://api.twitch.tv/kraken/games/top?limit=20");
+            URL url = new URL("https://api.twitch.tv/kraken/games/top?limit=" + StaticParams.amount);
             HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
             urlConnection.setRequestProperty("Accept", "application/vnd.twitchtv.v5+json");
             urlConnection.setRequestProperty("Client-ID", "sd4grh0omdj9a31exnpikhrmsu3v46");
@@ -54,7 +63,7 @@ public class SimpleAsyncTask extends AsyncTask<Void, Void, Void> {
                 info.setImage(object.getTop().get(i).getGame().getBox().getLarge());
                 info.setName(object.getTop().get(i).getGame().getName());
                 info.setChannels(object.getTop().get(i).getChannels());
-                info.setViewers(object.getTop().get(i).getViewers());
+                info.setViewers(Integer.parseInt(object.getTop().get(i).getViewers()));
 
                 arrayList.add(info);
             }
@@ -68,6 +77,9 @@ public class SimpleAsyncTask extends AsyncTask<Void, Void, Void> {
     @Override
     protected void onPostExecute(Void v) {
         if (offline) {
+
+            // Загрузка данных из БД
+
             loadDB();
             realm.executeTransactionAsync(new Realm.Transaction() {
                 @Override
@@ -77,11 +89,14 @@ public class SimpleAsyncTask extends AsyncTask<Void, Void, Void> {
                     for (Info info : realmResults) {
                         arrayList.add(new Info(info.getName(), info.getImage(), info.getViewers(), info.getChannels()));
                     }
+
+                    sort(arrayList);
                 }
             }, new Realm.Transaction.OnSuccess() {
                 @Override
                 public void onSuccess() {
                     recyclerViewAdapter.setItems(arrayList);
+                    StaticParams.amount = 100;
 
                     Log.d("check", "Offline load");
                 }
@@ -92,6 +107,9 @@ public class SimpleAsyncTask extends AsyncTask<Void, Void, Void> {
                 }
             });
         } else {
+
+            // Удаление старых записей, затем сохранение данных в БД
+
             loadDB();
             realm.executeTransactionAsync(new Realm.Transaction() {
                 @Override
@@ -121,8 +139,24 @@ public class SimpleAsyncTask extends AsyncTask<Void, Void, Void> {
         realm.close();
     }
 
+    // Инициализация Realm
+
     private void loadDB() {
-        Realm.init(context);
-        realm = Realm.getInstance(new RealmConfiguration.Builder().name("Save_Objects.realm").build());
+        Realm.init(contextWeakReference.get());
+        realm = Realm.getInstance(new RealmConfiguration.Builder().name("Save_Objects_2.realm").build());
+    }
+
+    // Сортировка данных по зрителям, полученных из БД
+
+    private void sort(ArrayList<Info> arrayList) {
+        for (int i = arrayList.size() - 1; i >= 1; i--) {
+            for (int a = 0; a < i; a++) {
+                if (arrayList.get(a).getViewers() < arrayList.get(a + 1).getViewers()) {
+                    Info info = arrayList.get(a);
+                    arrayList.set(a, arrayList.get(a + 1));
+                    arrayList.set(a + 1, info);
+                }
+            }
+        }
     }
 }

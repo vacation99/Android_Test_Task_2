@@ -15,7 +15,7 @@ import java.util.ArrayList;
 
 public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapter.SimpleViewHolder> {
 
-    private ArrayList<Info> arrayList = new ArrayList<>(20);
+    private ArrayList<Info> arrayList = new ArrayList<>(StaticParams.amount);
 
     @Override
     public SimpleViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
@@ -27,6 +27,12 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
     @Override
     public void onBindViewHolder(SimpleViewHolder holder, int position) {
         holder.bind(arrayList.get(position));
+
+        // Проверка что мы внизу recyclerview
+
+        if (position == arrayList.size() - 1) {
+            StaticParams.flag = true;
+        }
     }
 
     @Override
@@ -35,6 +41,7 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
     }
 
     public void setItems(ArrayList<Info> infoArrayList) {
+        arrayList.clear();
         arrayList.addAll(infoArrayList);
         notifyDataSetChanged();
     }

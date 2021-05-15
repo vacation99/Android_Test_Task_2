@@ -7,6 +7,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.RatingBar;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -30,6 +31,8 @@ public class MainActivity extends AppCompatActivity {
 
         new SimpleAsyncTask(recyclerViewAdapter, this).execute();
 
+        // Кнопка отзыва
+
         floatingActionButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -51,6 +54,24 @@ public class MainActivity extends AppCompatActivity {
                 });
 
                 dialog.show();
+            }
+        });
+
+        // Подгрузка данных в recyclerview в онлайне
+        // в офлайне данные не подгружаются, а срузу берутся целиком из бд
+
+        recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+
+                if (StaticParams.flag && StaticParams.amount != 100) {
+
+                    StaticParams.amount += 20;
+                    StaticParams.flag = false;
+
+                    new SimpleAsyncTask(recyclerViewAdapter, MainActivity.this).execute();
+                }
             }
         });
     }
